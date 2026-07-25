@@ -1,0 +1,29 @@
+[project]
+name = "my-color-recipe-ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "ShunNishida0701", email = "264t350t@stu.kobe-u.ac.jp" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.1",
+    "numpy>=2.5.1",
+    "pandas>=3.0.5",
+    "pillow>=12.3.0",
+    "streamlit>=1.60.0",
+]
+
+[project.scripts]
+my-color-recipe-ai = "my_color_recipe_ai:main"
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.0",
+]
