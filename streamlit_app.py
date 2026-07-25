@@ -6,6 +6,7 @@ import streamlit as st
 from PIL import Image, UnidentifiedImageError
 
 from my_color_recipe_ai.image_features import ImageFeatures, extract_features
+from my_color_recipe_ai.image_processing import apply_recipe
 from my_color_recipe_ai.preference import calculate_preference_profile
 from my_color_recipe_ai.recipe import suggest_recipe
 
@@ -103,6 +104,17 @@ else:
             target_image = source_target_image.convert("RGB")
 
         target_features = extract_features(target_image)
+
+        suggested_recipe = suggest_recipe(
+            preference_profile,
+            target_features,
+        )
+
+        processed_image = apply_recipe(
+            target_image,
+            suggested_recipe,
+        )
+        processed_features = extract_features(processed_image)
         suggested_recipe = suggest_recipe(
             preference_profile,
             target_features,
@@ -164,6 +176,53 @@ else:
                 "彩度",
                 f"{suggested_recipe['saturation_change']:+.3f}",
             )
+
+        # ここへ手順3のコードを入れる
+        st.write("#### 加工前後の比較")
+
+        before_column, after_column = st.columns(2)
+
+        with before_column:
+            st.write("**加工前**")
+            st.image(target_image, caption="Before")
+
+        with after_column:
+            st.write("**加工後**")
+            st.image(processed_image, caption="After")
+
+        result_comparison = pd.DataFrame(
+            [
+                {
+                    "種類": "好みの平均",
+                    "明るさ": preference_profile["brightness"],
+                    "コントラスト": preference_profile["contrast"],
+                    "彩度": preference_profile["saturation"],
+                },
+                {
+                    "種類": "加工前",
+                    "明るさ": target_features["brightness"],
+                    "コントラスト": target_features["contrast"],
+                    "彩度": target_features["saturation"],
+                },
+                {
+                    "種類": "加工後",
+                    "明るさ": processed_features["brightness"],
+                    "コントラスト": processed_features["contrast"],
+                    "彩度": processed_features["saturation"],
+                },
+            ]
+        )
+
+        st.dataframe(
+            result_comparison,
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "明るさ": st.column_config.NumberColumn(format="%.3f"),
+                "コントラスト": st.column_config.NumberColumn(format="%.3f"),
+                "彩度": st.column_config.NumberColumn(format="%.3f"),
+            },
+        )
 
     except (UnidentifiedImageError, OSError, ValueError) as error:
         st.error(f"{target_file.name}を分析できませんでした。詳細: {error}")
