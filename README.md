@@ -15,16 +15,21 @@ My Color Recipe AIは、ユーザーが好きな写真から明るさ、コン�
 - JPEG・PNG画像の複数アップロード
 - 明るさ、コントラスト、彩度の分析
 - Pandasによる好み写真の平均プロファイル計算
-- Matplotlibによる特徴量比較グラフ
+- 特徴量比較グラフ
 - 加工対象写真と好みプロファイルの比較
 - 明るさ、コントラスト、彩度の変更量提案
 - Pillowによる画像の自動加工
 - Before／After表示
 - 加工画像のPNG・JPEG保存
 - 加工レシピのJSON・CSV保存
-- pytestによる単体テストとスモークテスト
-- Ruffによるコード検査
-- GitHub Actionsによる継続的インテグレーション
+- 好みプロファイルを基準とした6種類の加工候補生成
+  - 好みに忠実
+  - 鮮明・クリア
+  - ノスタルジック
+  - ダーク・シネマ
+  - 明るい・エアリー
+  - 鮮やか・ポップ
+- 候補ごとの加工画像・JSON・CSV保存
 
 ## 使用技術
 
@@ -85,9 +90,10 @@ GitHub Codespacesでは、ポート`8501`をブラウザで開きます。
 2. 写真ごとの明るさ、コントラスト、彩度を確認します。
 3. 好みの平均プロファイルを確認します。
 4. 加工対象写真を1枚アップロードします。
-5. 提案された変更量と加工後画像を確認します。
-6. 加工画像をPNGまたはJPEGで保存します。
-7. 加工レシピをJSONまたはCSVで保存します。
+5. 6種類の加工候補をタブで比較します。
+6. 好みに近い候補を選びます。
+7. 選んだ加工画像をPNGまたはJPEGで保存します。
+8. 加工レシピをJSONまたはCSVで保存します。
 
 ## テスト
 
@@ -103,21 +109,28 @@ uv run ruff format --check .
 Prog/
 ├── src/
 │   └── my_color_recipe_ai/
+│       ├── __init__.py
 │       ├── image_features.py
 │       ├── image_processing.py
 │       ├── preference.py
 │       ├── recipe.py
-│       └── storage.py
+│       ├── storage.py
+│       └── variations.py
 ├── tests/
 │   ├── test_image_features.py
 │   ├── test_image_processing.py
 │   ├── test_preference.py
 │   ├── test_recipe.py
 │   ├── test_storage.py
-│   └── test_streamlit_app.py
+│   ├── test_streamlit_app.py
+│   └── test_variations.py
 ├── .github/
 │   └── workflows/
 │       └── test.yml
+├── outputs/
+│   └── .gitkeep
+├── sample_images/
+│   └── README.md
 ├── streamlit_app.py
 ├── pyproject.toml
 ├── uv.lock
@@ -144,7 +157,7 @@ Prog/
 
 開発ではAIを、機能設計、関数単位のコード案、テスト案、エラー調査、コードレビュー、CIおよび文書構成の提案に使用しました。
 
-AIの提案は、pytest、Ruff、GitHub Actionsおよび実際の画面操作によって確認しました。最終的な採用判断と目視確認は開発者が行いました。
+AIの提案は、pytest、Ruff、GitHub Actionsおよび実際の画面操作によって確認しました。最終的な採用判断と目視確認は自分で行いました。
 
 ## ライセンス
 
