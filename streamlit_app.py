@@ -7,6 +7,7 @@ from PIL import Image, UnidentifiedImageError
 
 from my_color_recipe_ai.image_features import ImageFeatures, extract_features
 from my_color_recipe_ai.preference import calculate_preference_profile
+from my_color_recipe_ai.recipe import suggest_recipe
 
 
 st.set_page_config(
@@ -84,6 +85,88 @@ with profile_columns[2]:
 
 with profile_columns[3]:
     st.metric("平均彩度", f"{preference_profile['saturation']:.3f}")
+
+    st.divider()
+st.subheader("加工対象写真とレシピ提案")
+
+target_file = st.file_uploader(
+    "加工したいJPEG・PNG画像を1枚選択してください",
+    type=["jpg", "jpeg", "png"],
+    key="target_image",
+)
+
+if target_file is None:
+    st.info("加工対象写真を選択すると、好みとの差を計算します。")
+else:
+    try:
+        with Image.open(target_file) as source_target_image:
+            target_image = source_target_image.convert("RGB")
+
+        target_features = extract_features(target_image)
+        suggested_recipe = suggest_recipe(
+            preference_profile,
+            target_features,
+        )
+
+        target_image_column, comparison_column = st.columns([2, 3])
+
+        with target_image_column:
+            st.image(target_image, caption=target_file.name)
+
+        with comparison_column:
+            comparison_dataframe = pd.DataFrame(
+                [
+                    {
+                        "種類": "好みの平均",
+                        "明るさ": preference_profile["brightness"],
+                        "コントラスト": preference_profile["contrast"],
+                        "彩度": preference_profile["saturation"],
+                    },
+                    {
+                        "種類": "加工対象",
+                        "明るさ": target_features["brightness"],
+                        "コントラスト": target_features["contrast"],
+                        "彩度": target_features["saturation"],
+                    },
+                ]
+            )
+
+            st.dataframe(
+                comparison_dataframe,
+                hide_index=True,
+                width="stretch",
+                column_config={
+                    "明るさ": st.column_config.NumberColumn(format="%.3f"),
+                    "コントラスト": st.column_config.NumberColumn(format="%.3f"),
+                    "彩度": st.column_config.NumberColumn(format="%.3f"),
+                },
+            )
+
+        st.write("#### 提案された変更量")
+        st.caption("プラスは増加、マイナスは減少を表します。")
+
+        recipe_columns = st.columns(3)
+
+        with recipe_columns[0]:
+            st.metric(
+                "明るさ",
+                f"{suggested_recipe['brightness_change']:+.3f}",
+            )
+
+        with recipe_columns[1]:
+            st.metric(
+                "コントラスト",
+                f"{suggested_recipe['contrast_change']:+.3f}",
+            )
+
+        with recipe_columns[2]:
+            st.metric(
+                "彩度",
+                f"{suggested_recipe['saturation_change']:+.3f}",
+            )
+
+    except (UnidentifiedImageError, OSError, ValueError) as error:
+        st.error(f"{target_file.name}を分析できませんでした。詳細: {error}")
 
 results_dataframe = pd.DataFrame(analysis_results)
 
