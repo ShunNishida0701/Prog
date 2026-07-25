@@ -5,7 +5,8 @@ import pandas as pd
 import streamlit as st
 from PIL import Image, UnidentifiedImageError
 
-from my_color_recipe_ai.image_features import extract_features
+from my_color_recipe_ai.image_features import ImageFeatures, extract_features
+from my_color_recipe_ai.preference import calculate_preference_profile
 
 
 st.set_page_config(
@@ -28,6 +29,7 @@ if not uploaded_files:
     st.stop()
 
 analysis_results: list[dict[str, str | float]] = []
+preference_features: list[ImageFeatures] = []
 
 for uploaded_file in uploaded_files:
     try:
@@ -35,6 +37,7 @@ for uploaded_file in uploaded_files:
             image = source_image.convert("RGB")
 
         features = extract_features(image)
+        preference_features.append(features)
 
         analysis_results.append(
             {
@@ -62,6 +65,25 @@ for uploaded_file in uploaded_files:
 if not analysis_results:
     st.warning("分析できる画像がありませんでした。")
     st.stop()
+
+preference_profile = calculate_preference_profile(preference_features)
+
+st.subheader("好みの平均プロファイル")
+st.write("アップロードした写真の特徴量を平均し、現在の好みの傾向として表示しています。")
+
+profile_columns = st.columns(4)
+
+with profile_columns[0]:
+    st.metric("写真枚数", preference_profile["photo_count"])
+
+with profile_columns[1]:
+    st.metric("平均明るさ", f"{preference_profile['brightness']:.3f}")
+
+with profile_columns[2]:
+    st.metric("平均コントラスト", f"{preference_profile['contrast']:.3f}")
+
+with profile_columns[3]:
+    st.metric("平均彩度", f"{preference_profile['saturation']:.3f}")
 
 results_dataframe = pd.DataFrame(analysis_results)
 
