@@ -1,5 +1,7 @@
 """My Color Recipe AIのStreamlit画面。"""
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
@@ -9,6 +11,11 @@ from my_color_recipe_ai.image_features import ImageFeatures, extract_features
 from my_color_recipe_ai.image_processing import apply_recipe
 from my_color_recipe_ai.preference import calculate_preference_profile
 from my_color_recipe_ai.recipe import suggest_recipe
+from my_color_recipe_ai.storage import (
+    image_to_bytes,
+    recipe_to_csv,
+    recipe_to_json,
+)
 
 
 st.set_page_config(
@@ -87,7 +94,7 @@ with profile_columns[2]:
 with profile_columns[3]:
     st.metric("平均彩度", f"{preference_profile['saturation']:.3f}")
 
-    st.divider()
+st.divider()
 st.subheader("加工対象写真とレシピ提案")
 
 target_file = st.file_uploader(
@@ -115,10 +122,6 @@ else:
             suggested_recipe,
         )
         processed_features = extract_features(processed_image)
-        suggested_recipe = suggest_recipe(
-            preference_profile,
-            target_features,
-        )
 
         target_image_column, comparison_column = st.columns([2, 3])
 
@@ -223,6 +226,57 @@ else:
                 "彩度": st.column_config.NumberColumn(format="%.3f"),
             },
         )
+
+        st.write("#### 加工結果のダウンロード")
+
+        output_format = st.radio(
+            "画像の保存形式",
+            options=["PNG", "JPEG"],
+            horizontal=True,
+            key="output_format",
+        )
+
+        image_data = image_to_bytes(processed_image, output_format)
+        recipe_json = recipe_to_json(suggested_recipe)
+        recipe_csv = recipe_to_csv(suggested_recipe)
+
+        base_filename = Path(target_file.name).stem
+
+        if output_format == "PNG":
+            image_extension = "png"
+            image_mime = "image/png"
+        else:
+            image_extension = "jpg"
+            image_mime = "image/jpeg"
+
+        download_columns = st.columns(3)
+
+        with download_columns[0]:
+            st.download_button(
+                label="加工画像を保存",
+                data=image_data,
+                file_name=(f"{base_filename}_processed.{image_extension}"),
+                mime=image_mime,
+                key="download_processed_image",
+            )
+
+        with download_columns[1]:
+            st.download_button(
+                label="JSONレシピを保存",
+                data=recipe_json,
+                file_name=f"{base_filename}_recipe.json",
+                mime="application/json",
+                key="download_recipe_json",
+            )
+
+        with download_columns[2]:
+            st.download_button(
+                label="CSVレシピを保存",
+                data=recipe_csv,
+                file_name=f"{base_filename}_recipe.csv",
+                mime="text/csv",
+                key="download_recipe_csv",
+            )
 
     except (UnidentifiedImageError, OSError, ValueError) as error:
         st.error(f"{target_file.name}を分析できませんでした。詳細: {error}")
