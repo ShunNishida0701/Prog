@@ -4,7 +4,6 @@ from PIL import Image, ImageEnhance
 
 from my_color_recipe_ai.recipe import PhotoRecipe
 
-
 CHANGE_NAMES = (
     "brightness_change",
     "contrast_change",
@@ -18,7 +17,7 @@ def _validate_recipe(recipe: PhotoRecipe) -> None:
         value = recipe.get(change_name)
 
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError(f"{change_name}が数値ではありません。")
+            raise TypeError(f"{change_name}が数値ではありません。")
 
         if not -1.0 <= float(value) <= 1.0:
             raise ValueError(f"{change_name}は-1.0～1.0の範囲で指定してください。")

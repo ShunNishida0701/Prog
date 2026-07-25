@@ -27,7 +27,7 @@ def _validate_features(
         value = features.get(feature_name)
 
         if not isinstance(value, (int, float)):
-            raise ValueError(f"{input_name}の{feature_name}が数値ではありません。")
+            raise TypeError(f"{input_name}の{feature_name}が数値ではありません。")
 
         if not 0.0 <= float(value) <= 1.0:
             raise ValueError(

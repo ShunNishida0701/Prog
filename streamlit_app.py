@@ -17,7 +17,6 @@ from my_color_recipe_ai.storage import (
     recipe_to_json,
 )
 
-
 st.set_page_config(
     page_title="My Color Recipe AI",
     page_icon="🎨",

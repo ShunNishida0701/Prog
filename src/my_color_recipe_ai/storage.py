@@ -8,11 +8,6 @@ from PIL import Image
 
 from my_color_recipe_ai.recipe import PhotoRecipe
 
-from my_color_recipe_ai.image_features import ImageFeatures, extract_features
-from my_color_recipe_ai.image_processing import apply_recipe
-from my_color_recipe_ai.preference import calculate_preference_profile
-from my_color_recipe_ai.recipe import suggest_recipe
-
 SUPPORTED_IMAGE_FORMATS = ("JPEG", "PNG")
 
 
