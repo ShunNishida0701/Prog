@@ -16,6 +16,7 @@ from my_color_recipe_ai.storage import (
     recipe_to_csv,
     recipe_to_json,
 )
+from my_color_recipe_ai.variations import generate_recipe_variations
 
 st.set_page_config(
     page_title="My Color Recipe AI",
@@ -103,7 +104,7 @@ target_file = st.file_uploader(
 )
 
 if target_file is None:
-    st.info("加工対象写真を選択すると、好みとの差を計算します。")
+    st.info("加工対象写真を選択すると、6種類の加工候補を生成します。")
 else:
     try:
         with Image.open(target_file) as source_target_image:
@@ -111,16 +112,11 @@ else:
 
         target_features = extract_features(target_image)
 
-        suggested_recipe = suggest_recipe(
+        base_recipe = suggest_recipe(
             preference_profile,
             target_features,
         )
-
-        processed_image = apply_recipe(
-            target_image,
-            suggested_recipe,
-        )
-        processed_features = extract_features(processed_image)
+        recipe_variations = generate_recipe_variations(base_recipe)
 
         target_image_column, comparison_column = st.columns([2, 3])
 
@@ -156,67 +152,128 @@ else:
                 },
             )
 
-        st.write("#### 提案された変更量")
-        st.caption("プラスは増加、マイナスは減少を表します。")
+        st.write("#### 6種類の加工候補")
+        st.write("タブを切り替えて、加工結果と変更量を比較してください。")
 
-        recipe_columns = st.columns(3)
-
-        with recipe_columns[0]:
-            st.metric(
-                "明るさ",
-                f"{suggested_recipe['brightness_change']:+.3f}",
-            )
-
-        with recipe_columns[1]:
-            st.metric(
-                "コントラスト",
-                f"{suggested_recipe['contrast_change']:+.3f}",
-            )
-
-        with recipe_columns[2]:
-            st.metric(
-                "彩度",
-                f"{suggested_recipe['saturation_change']:+.3f}",
-            )
-
-        # ここへ手順3のコードを入れる
-        st.write("#### 加工前後の比較")
-
-        before_column, after_column = st.columns(2)
-
-        with before_column:
-            st.write("**加工前**")
-            st.image(target_image, caption="Before")
-
-        with after_column:
-            st.write("**加工後**")
-            st.image(processed_image, caption="After")
-
-        result_comparison = pd.DataFrame(
-            [
-                {
-                    "種類": "好みの平均",
-                    "明るさ": preference_profile["brightness"],
-                    "コントラスト": preference_profile["contrast"],
-                    "彩度": preference_profile["saturation"],
-                },
-                {
-                    "種類": "加工前",
-                    "明るさ": target_features["brightness"],
-                    "コントラスト": target_features["contrast"],
-                    "彩度": target_features["saturation"],
-                },
-                {
-                    "種類": "加工後",
-                    "明るさ": processed_features["brightness"],
-                    "コントラスト": processed_features["contrast"],
-                    "彩度": processed_features["saturation"],
-                },
-            ]
+        output_format = st.radio(
+            "ダウンロードする画像の形式",
+            options=["PNG", "JPEG"],
+            horizontal=True,
+            key="output_format",
         )
 
+        if output_format == "PNG":
+            image_extension = "png"
+            image_mime = "image/png"
+        else:
+            image_extension = "jpg"
+            image_mime = "image/jpeg"
+
+        base_filename = Path(target_file.name).stem
+        variation_tabs = st.tabs([variation.name for variation in recipe_variations])
+        candidate_results: list[dict[str, str | float]] = []
+
+        for variation_tab, variation in zip(
+            variation_tabs,
+            recipe_variations,
+            strict=True,
+        ):
+            with variation_tab:
+                st.write(variation.description)
+
+                candidate_image = apply_recipe(
+                    target_image,
+                    variation.recipe,
+                )
+                candidate_features = extract_features(candidate_image)
+
+                candidate_results.append(
+                    {
+                        "候補": variation.name,
+                        "明るさ": candidate_features["brightness"],
+                        "コントラスト": candidate_features["contrast"],
+                        "彩度": candidate_features["saturation"],
+                    }
+                )
+
+                before_column, after_column = st.columns(2)
+
+                with before_column:
+                    st.write("**加工前**")
+                    st.image(target_image, caption="Before")
+
+                with after_column:
+                    st.write(f"**{variation.name}**")
+                    st.image(
+                        candidate_image,
+                        caption=variation.name,
+                    )
+
+                st.write("##### この候補の変更量")
+                change_columns = st.columns(3)
+
+                with change_columns[0]:
+                    st.metric(
+                        "明るさ",
+                        f"{variation.recipe['brightness_change']:+.3f}",
+                    )
+
+                with change_columns[1]:
+                    st.metric(
+                        "コントラスト",
+                        f"{variation.recipe['contrast_change']:+.3f}",
+                    )
+
+                with change_columns[2]:
+                    st.metric(
+                        "彩度",
+                        f"{variation.recipe['saturation_change']:+.3f}",
+                    )
+
+                image_data = image_to_bytes(
+                    candidate_image,
+                    output_format,
+                )
+                recipe_json = recipe_to_json(variation.recipe)
+                recipe_csv = recipe_to_csv(variation.recipe)
+
+                download_columns = st.columns(3)
+
+                with download_columns[0]:
+                    st.download_button(
+                        label="加工画像を保存",
+                        data=image_data,
+                        file_name=(
+                            f"{base_filename}_{variation.style_id}.{image_extension}"
+                        ),
+                        mime=image_mime,
+                        key=f"image_{variation.style_id}",
+                    )
+
+                with download_columns[1]:
+                    st.download_button(
+                        label="JSONレシピを保存",
+                        data=recipe_json,
+                        file_name=(f"{base_filename}_{variation.style_id}.json"),
+                        mime="application/json",
+                        key=f"json_{variation.style_id}",
+                    )
+
+                with download_columns[2]:
+                    st.download_button(
+                        label="CSVレシピを保存",
+                        data=recipe_csv,
+                        file_name=(f"{base_filename}_{variation.style_id}.csv"),
+                        mime="text/csv",
+                        key=f"csv_{variation.style_id}",
+                    )
+
+        st.write("#### 候補ごとの特徴量比較")
+
+        candidate_dataframe = pd.DataFrame(candidate_results)
+
         st.dataframe(
-            result_comparison,
+            candidate_dataframe,
             hide_index=True,
             width="stretch",
             column_config={
@@ -226,59 +283,9 @@ else:
             },
         )
 
-        st.write("#### 加工結果のダウンロード")
-
-        output_format = st.radio(
-            "画像の保存形式",
-            options=["PNG", "JPEG"],
-            horizontal=True,
-            key="output_format",
-        )
-
-        image_data = image_to_bytes(processed_image, output_format)
-        recipe_json = recipe_to_json(suggested_recipe)
-        recipe_csv = recipe_to_csv(suggested_recipe)
-
-        base_filename = Path(target_file.name).stem
-
-        if output_format == "PNG":
-            image_extension = "png"
-            image_mime = "image/png"
-        else:
-            image_extension = "jpg"
-            image_mime = "image/jpeg"
-
-        download_columns = st.columns(3)
-
-        with download_columns[0]:
-            st.download_button(
-                label="加工画像を保存",
-                data=image_data,
-                file_name=(f"{base_filename}_processed.{image_extension}"),
-                mime=image_mime,
-                key="download_processed_image",
-            )
-
-        with download_columns[1]:
-            st.download_button(
-                label="JSONレシピを保存",
-                data=recipe_json,
-                file_name=f"{base_filename}_recipe.json",
-                mime="application/json",
-                key="download_recipe_json",
-            )
-
-        with download_columns[2]:
-            st.download_button(
-                label="CSVレシピを保存",
-                data=recipe_csv,
-                file_name=f"{base_filename}_recipe.csv",
-                mime="text/csv",
-                key="download_recipe_csv",
-            )
-
     except (UnidentifiedImageError, OSError, ValueError) as error:
         st.error(f"{target_file.name}を分析できませんでした。詳細: {error}")
+
 
 results_dataframe = pd.DataFrame(analysis_results)
 
