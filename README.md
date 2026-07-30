@@ -1,4 +1,4 @@
-# My Color Recipe AI
+# My Color Recipe
 
 [![CI](https://github.com/ShunNishida0701/Prog/actions/workflows/test.yml/badge.svg)](https://github.com/ShunNishida0701/Prog/actions/workflows/test.yml)
 
