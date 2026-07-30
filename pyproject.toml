@@ -1,7 +1,7 @@
 [project]
 name = "my-color-recipe-ai"
 version = "0.1.0"
-description = "Add your description here"
+description = "好みの写真から複数の画像加工候補を提案するStreamlitアプリ"
 readme = "README.md"
 authors = [
     { name = "ShunNishida0701", email = "264t350t@stu.kobe-u.ac.jp" }
